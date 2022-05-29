@@ -1,9 +1,12 @@
 package com.autohome.frostmourne.monitor.config;
 
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 
 import javax.annotation.Resource;
 
+import com.autohome.frostmourne.monitor.tool.ClientHttpRequestFactory;
 import org.elasticsearch.common.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +46,21 @@ public class BeanConfig {
     @Value("${spring.lap.auth.searchFilter}")
     private String searchFilter;
 
+    @Value("${rest.proxy.enable:false}")
+    private Boolean restProxyEnable;
+
+    @Value("${rest.proxy.type:http}")
+    private String restPorxyType;
+
+    @Value("${rest.proxy.hostname}")
+    private String restProxtHostname;
+
+    @Value("${rest.proxy.rule:}")
+    private String restProxyRule;
+
+    @Value("${rest.proxy.port}")
+    private Integer restProxyPort;
+
     @Resource
     private LdapTemplate ldapTemplate;
 
@@ -59,7 +77,17 @@ public class BeanConfig {
 
     @Bean
     public RestTemplate restTemplate() {
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate;
+        if(restProxyEnable){
+            Proxy.Type type = Proxy.Type.valueOf(restPorxyType.toUpperCase());
+            Proxy proxy = new Proxy(type, new InetSocketAddress(restProxtHostname, restProxyPort));
+            ClientHttpRequestFactory requestFactory = new ClientHttpRequestFactory();
+            requestFactory.setProxy(proxy, restProxyRule);
+            System.out.println(proxy);
+            restTemplate = new RestTemplate(requestFactory);
+        }else{
+            restTemplate = new RestTemplate();
+        }
         restTemplate.getMessageConverters().set(1, new StringHttpMessageConverter(StandardCharsets.UTF_8));
         return restTemplate;
     }
